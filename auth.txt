@@ -1,0 +1,92 @@
+? How Authentication works in a restFull service..
+
+-Step:1 Client Send Some Auth Data(EmailId, Password).
+
+-Step:2 If Client is not registered then we save that auth data in our database and if the client is not registered he wants to login then we simple cross verify that the auth data which client send to us is present in in our database or not.
+
+-Step:3 If That Auth Data Exists in our database then we allow the client to access the resources. and if not then we just reject the auth permission.
+
+-Step:4 when we allow client to access the resources in return we send something to the client machine so that we can remember them next time they send a auth data.. this can be a session or a cookie
+? Normally session is used but if send session in our restFull api then it is against those 6 constraint, which says you cannot connect to users by any medium because rest api's are stateless they don't save any information about the connected client.
+> Instead what we do we will send a TOKEN,
+
+- A Token will be some objet which contains some signature that can help us to verify this is a valid token and contains some information about the logged in client.
+- This token will store in the client token storage and will append it in the future request so that next time we can verify that client.
+
+# TOKEN is a JSON WEB TOKEN (JWT)
+  @ JSON DATA (logged in user info)
+  @ SIgnature (used to verify)
+
+# Bcrypt: npm package to encrypt password in hash-code.
+  - To hash a password:
+  +1. Technique 1 (generate a salt and hash on separate function calls):
+      > bcrypt.genSalt(saltRounds, function(err, salt) {
+      >     bcrypt.hash(myPlaintextPassword, salt, function(err, hash) {
+      >         // Store hash in your password DB.
+      >     });
+      > });
+
+  +2. Technique 2 (auto-gen a salt and hash):
+      > bcrypt.hash(myPlaintextPassword, saltRounds, function(err, hash) {
+      >     // Store hash in your password DB.
+      > });   
+
+? What is Salt-Rounds ?
+  If we hash a password you cannot reverse it, you cannot convert that hash into password again..It's one way operation..
+  But if you get this hash and google it chances are high you would find a translation of your plainText password, WHY because every plainText string has a unique hashed version of it just like a dictionary-tables exist i.e on one side plain text string is there and on the other side its hashed version.
+  If your user has very elaborate password then the chances are less to get its translation on google, but if the password is like "icecream" then it is easily available on the google.
+
+  What does salting does is that--> it add random string in your plain text password before hashing, and this string that were added are also stored in the hash.
+  Now if you get this hash you won't be able to get this translation on google simple because the hash contains random string and we don;t have a dictionary table for all the random strings..
+
+# Sending Tokens using JWT with a library name jsonwebtoken.
+  To use it simply install it first: npm install jsonwebtoken
+
+  Using this library we will do complex process like token generation, adding signatures.
+
+? jwt.sign(payload, secretOrPrivateKey, [options, callback])
+  
+  - (Asynchronous) If a callback is supplied, the callback is called with the err or the JWT.
+  - (Synchronous) Returns the JsonWebToken as string
+
+  - payload could be an object literal, buffer or string representing valid JSON.
+
+  - secretOrPrivateKey is a string, buffer, or object containing either the secret for HMAC algorithms or the PEM encoded private key for RSA and ECDSA. In case of a private key with passphrase an object { key, passphrase } can be used (based on crypto documentation), in this case be sure you pass the algorithm option.
+
+  - options: 
+    + algorithm (default: HS256)
+    + expiresIn: expressed in seconds or a string describing a time span zeit/ms.
+      Eg: 60, "2 days", "10h", "7d". A numeric value is interpreted as a seconds count. If you use a string be sure you provide the time units (days, hours, etc), otherwise milliseconds unit is used by default ("120" is equal to "120ms").
+    + notBefore: expressed in seconds or a string describing a time span zeit/ms.
+      Eg: 60, "2 days", "10h", "7d". A numeric value is interpreted as a seconds count. If you use a string be sure you provide the time units (days, hours, etc), otherwise milliseconds unit is used by default ("120" is equal to "120ms").
+    
+    + audience
+    + issuer
+    + jwtid
+    + subject
+    + noTimestamp
+    + header
+    + keyid
+    + mutatePayload: if true, the sign function will modify the payload object directly. This is useful if you need a raw reference to the payload after claims have been applied to it but before it has been encoded into a token.
+    Note: There are no default values for expiresIn, notBefore, audience, subject, issuer. These claims can also be provided in the payload directly with exp, nbf, aud, sub and iss respectively, but you can't include in both places.
+   
+     const token = jwt.sign(
+            {
+              email: user[0].email,
+              userId: user[0]._id,
+            },
+            process.env.JWT_KEY,
+            {
+              expiresIn: "1h",
+            }
+          );
+     This token is a unique string 
+     `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImNudUBnbWFpbC5jb20iLCJ1c2VySWQiOiI2MDFlMzQyMjFjZGQ3MDY4Njg4NDZmNWUiLCJpYXQiOjE2MTI2MDQ3NjAsImV4cCI6MTYxMjYwODM2MH0.q9tq9tE4eiogUeDN_B2gKIu4fsadTZzyCuqtIJkRRaE`
+     Which can be decoded by this site-->https://jwt.io/
+
+Now What we can do with this token, Well we can check that user is successfully authenticated or not..
+
+For Ex-->
+? Protecting Routes..
+  At every route we can use a middleware function that will check whether the user have our token which we send from our server by using jwt verify method.
+  and if the token is verified successfully then we can call next() function in our middleware otherwise provide an error..

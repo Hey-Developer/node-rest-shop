@@ -1,0 +1,9 @@
+{
+  "env": {
+    "PORT": 8000,
+    "DB_USER_NAME": "node-shop-admin",
+    "DB_PASS": "node-shop-admin",
+    "DB_NAME": "node-rest-shop-db",
+    "JWT_KEY": "secret"
+  }
+}

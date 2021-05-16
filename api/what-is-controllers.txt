@@ -1,0 +1,10 @@
+Take a Look at your routes file..
+Isn't too messy but what we write there
+Well we just write a function corresponding to each routes.
+
+So how we make our code clean..
+Ans is: Controllers..
+
+? What we have to do : is just make a separate folder named "Controllers" and then inside it..
+We copy our functions that run on each routes and make a new function here in controller with a suitable name and then export this function and use it as a middleware in routes request.
+

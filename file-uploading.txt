@@ -1,0 +1,129 @@
+$ There are two approaches for uploading files using node.js server
+
+#1. Is you create a separate end point to parse the binary data as in that case req.body will not be available because body-parser is only able to parse url-encoded and json not binary data. one problem with this approach is we also need to pass that information to which product this file belongs. and in that case we need a body parser because that information is not going to be binary..
+
+#2 Now one easy way is that we change the working of post route instead of sending json data to the server we will send the form-data which is offered by the js in which data and file can simultaneously exist. now to parse that form data we need to download a package name multer which is also a parser package that can parse multiple bodies..
+
+Now to use multer first simply install it using npm,
+then require it and then call a uploading function.
+
+- Multer adds a body object and a file or files object to the request object. The body object contains the values of the text fields of the form, the file or files object contains the files uploaded via the form.
+
+- Multer will not process any form which is not multipart (multipart/form-data)
+
+- What is Multipart Data?
+In general, when a “form” is submitted, browsers use “application-xx-www-form-urlencoded” content-type. This type contains only a list of keys and values and therefore are not capable of uploading files. Whereas, when you configure your form to use “multipart/form-data” content-type, browsers will create a “multipart” message where each part will contain a field of the form. A multipart message will consist of text input and file input. This way using multipart/form-data you can upload files.
+
+? File Uploading with Multer...
+
+- Step:1 const multer  = require('multer');
+/* We will upload the file on server local directory, not in database. We will store the directory path into the database. */
+
+- Step:2 const upload = multer({dest:'uploads/'}).single("demo_image");
+Here, we have called the multer() method. It accepts an options object, with dest property, which tells Multer where to upload the files. If you omit this object, the files will be kept in memory and never written to disk.
+
+Note: that the name of the file field should be the same as the myFile argument passed to the upload.single function.
+
+You can also uploads multiple files using array method of upload
+> uploads.single("field_name)
+> uploads.array("field_name",limit_of_upload)
+> uploads.fields([{name:"avatar", maxCount: 1}, {name: "gallery", maxCount: 8}]) 
+// req.files is an object (String -> Array) where fieldname is the key, and the value is array of files
+
+Once this is done, We will now create our post route. We will make a POST request to the URL [localhost:port/image]. For that, we will first have to listen to that endpoint and we will do that by using the post() method.
+
+- Step:3 Either You can define upload function like this..
+app.post("/image", (req, res) => {
+   upload(req, res, (err) => {
+    if(err) {
+      res.status(400).send("Something went wrong!");
+    }
+    res.send(req.file);
+  });
+});
+
+- OR Just pass it as middleware
+app.post("/image",upload, (req, res) => {
+  console.log(req.file)
+});
+
+? Additional Settings: 
+
+# DiskStorage: 
+The disk storage engine gives you full control over storing files to disk. We will create a storage object using the diskStorage() method.
+> var storage = multer.diskStorage({   
+>    destination: function(req, file, cb) { 
+>       cb(null, './uploads');    
+>    }, 
+>    filename: function (req, file, cb) { 
+>       cb(null , file.originalname);   
+>    }
+> });
+
+- Here, there are two properties, destination, and filename. They both are functions.
+
++ destination - It can also be given as a string (e.g. './uploads'). If no destination is given, the operating system's default directory for temporary files is used. It is mandatory to create a directory when you are using destination as a function. Otherwise, if you are using destination as a string, multer will make sure that the directory is created for you.
+
++ filename - It is used to determine what the file should be named inside the folder. If you don't provide any filename, each file will be given a random name without any file extension. It is your responsibility to provide a function that should return a complete filename with a file extension.
+
++ Both these functions take 3 arguments - the request object, the file object and a callback function (here, cb is callback function). The 2 arguments to cb are:
+@ null - as we don’t want to show any error.
+@ file.originalname - here, we have used the same name of the file as they were uploaded. You can use any name of your choice.
+
+Now pass this storage object in the multer function...Like this..
+> var upload = multer({ storage: storage }).single("demo_image");
+
+? Other Options in Upload: 
+
+#1. limits - You can also put a limit on the size of the file that is being uploaded with the help of using limits.
+const upload = multer({
+       storage: storage,
+       limits : {fileSize : 1000000}
+});
+// Here, fileSize is in bytes. (1000000 bytes = 1MB)
+
+#2. fileFilter - Set this to a function to control which files should be uploaded and which should be skipped. The function should look like this:
+// this code goes inside the object passed to multer()
+> function fileFilter (req, file, cb) {  
+>    // The function should call `cb` with a boolean  
+>    // to indicate if the file should be accepted  
+
+>    // To reject this file pass `false`, like so:   
+>    cb(null, false);
+>    // To accept the file pass `true`, like so:   
+>    cb(null, true);   
+>    // You can always pass an error if something goes wrong:   
+>    cb(new Error('I don\'t have a clue!')); 
+> }
+
+For Example, if we only want the user to upload the image file (jpeg, jpg, png, gif).
+
+Then the code will look like this and will go in app.js:
+// this code goes inside the object passed to multer()
+> function fileFilter (req, file, cb) {    
+>   // Allowed ext
+>    const filetypes = /jpeg|jpg|png|gif/;
+
+>  // Check ext
+>   const extname =  filetypes.test(path.extname(file.originalname).toLowerCase> ());
+>  // Check mime
+>  const mimetype = filetypes.test(file.mimetype);
+
+>  if(mimetype && extname){
+>      return cb(null,true);
+>  } else {
+>      cb('Error: Images Only!');
+>  }
+> }
+
+#Uploading Multiple Files: We can upload multiple files as well. In this case, multer gives us another function called .arrays(fieldname[, max_count]) that accepts an array of files, all with the name fieldname. It generates an error if more than max_count files are uploaded. The array of files will be stored in req.files.
+
+// uploading multiple images together
+> app.post("/images", upload.array("demo_images", 4), (req, res) =>{
+>   try {
+>     res.send(req.files);
+>   } catch (error) {
+>     console.log(error);
+>     res.send(400);
+>   }
+> });

@@ -1,0 +1,23 @@
+$ Cross-Origin-Resources-Sharing
+These means that if the client and server has same origin then there is no problem in sharing data between them..
+Ex-->
+Client                                  Server
+localhost:3000/                         localhost:3000/
+
+But if client and server have different origin then the data transfer is not allowed for security reasons.
+Ex-->
+Client                                  Server
+localhost:3000/                         localhost:4000
+
+? But we are working with the REST api's, and the rest api's are most usually called from different origins, so we have to disabled this cors from our side so that client browser can allow access to our api which is on the different origin
+
+* TO disabled cors we need to send a HTTP header from server side to the browser so that when browser read that header it will allow cross origin resource sharing.
+
+So we have to send that header in response on every request on our server.
+to do that we can use a middleware which is fired on every request and in response it can send the header(Access-Control-Allow-Origin)
+
+# app.use((req,res,next)=>{
+    res.header("Access-Control-Allow-Origin",'*');
+    //These is to set that which headers are allow to send with the response you can either set it to "*" to allow all or you can set it to "Origin, X-Requested-With, Content-type, Accept, Authorization"
+    res.header("Access-Control-Allow-Headers","Origin, X-Requested-With, Content-type, Accept, Authorization")
+})
